@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 0e229b7cfa1fd7f55a8606849e05ba11eeec5a1500b9efd45b6a616524350d04 # shrinks to bytes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+cc e0ad7098bed21e39773087b4bdde3c80a77ae112cd933a4157e87470b34b016e # shrinks to alias_id = AliasId(0xcf077d276686ba64c0404b9eb2d15556782113c5a1985f262b70f9964d3bbd7f)
