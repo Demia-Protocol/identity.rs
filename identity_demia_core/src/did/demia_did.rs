@@ -786,6 +786,34 @@ mod tests {
   }
 
   #[test]
+  fn test_country() {
+    let execute_assertions = |valid_alias_id: &str| {
+      let did: DemiaDID = format!("did:{}:{}", DemiaDID::METHOD, valid_alias_id).parse().unwrap();
+      assert_eq!(did.country_str(), DemiaDID::DEFAULT_COUNTRY);
+
+      // Properly lowercase country
+      let did: DemiaDID = format!("did:{}:{}:dev:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)
+        .parse()
+        .unwrap();
+      assert_eq!(did.country_str(), "usa");
+
+      // Upper case transformed to lower case
+      let did: DemiaDID = format!("did:{}:{}:test:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3(), valid_alias_id)
+        .parse()
+        .unwrap();
+      assert_eq!(did.country_str(), "usa");
+
+      let did: DemiaDID = format!("did:{}:{}:custom:{}", DemiaDID::METHOD, isocountry::alpha3::ISO_A3_USA, valid_alias_id)
+        .parse()
+        .unwrap();
+      assert_eq!(did.country_str(), "usa");
+    };
+
+    execute_assertions(DemiaDID::PLACEHOLDER_TAG);
+    execute_assertions(VALID_ALIAS_ID_STR);
+  }
+
+  #[test]
   fn test_tag() {
     let execute_assertions = |valid_alias_id: &str| {
       let did: DemiaDID = format!("did:{}:{}", DemiaDID::METHOD, valid_alias_id).parse().unwrap();
