@@ -30,11 +30,20 @@ default-features = false
 features = ["send-sync-client-ext", "iota-client"]
 optional = true
 
+[dependencies.identity_demia_core]
+version = "=0.0.1-alpha.1"
+path = "../identity_demia_core"
+default-features = false
+features = ["send-sync-client-ext", "iota-client"]
+optional = true
+
 [dev-dependencies]
 tokio = { version = "1.17.0", default-features = false, features = ["rt-multi-thread", "macros"] }
 
 [features]
 default = ["revocation-bitmap", "iota"]
-revocation-bitmap = ["identity_credential/revocation-bitmap", "identity_iota_core?/revocation-bitmap"]
+revocation-bitmap = ["identity_credential/revocation-bitmap", "identity_iota_core?/revocation-bitmap", "identity_demia_core?/revocation-bitmap"]
 # Enables the IOTA integration for the resolver.
 iota = ["dep:identity_iota_core"]
+# Enables the Demia integration for the resolver.
+demia = ["dep:identity_demia_core"]

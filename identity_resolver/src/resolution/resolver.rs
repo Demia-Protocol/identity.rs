@@ -241,6 +241,41 @@ impl<DOC: 'static> Resolver<DOC, SingleThreadedCommand<DOC>> {
   }
 }
 
+
+#[cfg(feature = "demia")]
+
+mod demia_handler {
+  use super::Resolver;
+  use identity_document::document::CoreDocument;
+  use identity_demia_core::IotaClientExt;
+  use identity_demia_core::DemiaDID;
+  use identity_demia_core::IotaDocument;
+  use identity_demia_core::IotaIdentityClientExt;
+  use std::sync::Arc;
+
+  impl<DOC> Resolver<DOC>
+  where
+    DOC: From<IotaDocument> + AsRef<CoreDocument> + 'static,
+  {
+    /// Convenience method for attaching a new handler responsible for resolving IOTA DIDs.
+    ///
+    /// See also [`attach_handler`](Self::attach_handler).
+    pub fn attach_demia_handler<CLI>(&mut self, client: CLI)
+    where
+      CLI: IotaClientExt + Send + Sync + 'static,
+    {
+      let arc_client: Arc<CLI> = Arc::new(client);
+
+      let handler = move |did: DemiaDID| {
+        let future_client = arc_client.clone();
+        async move { future_client.resolve_did(&did).await }
+      };
+
+      self.attach_handler(DemiaDID::METHOD.to_owned(), handler);
+    }
+  }
+}
+
 #[cfg(feature = "iota")]
 mod iota_handler {
   use super::Resolver;

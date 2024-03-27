@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "identity_core",
   "identity_credential",
+  "identity_demia",
   "identity_demia_core",
   "identity_did",
   "identity_document",
