@@ -6,6 +6,8 @@ members = [
   # "identity_comm",
   "identity_core",
   "identity_credential",
+  "identity_demia",
+  "identity_demia_core",
   "identity_did",
   "identity_diff",
   "identity_document",
