@@ -33,7 +33,7 @@ default = ["revocation-bitmap", "client", "iota-client", "resolver"]
 client = ["identity_demia_core/client"]
 
 # Enables the iota-client integration, the client trait implementations for it, and the `IotaClientExt` trait.
-iota-client = ["identity_demia_core/iota-client", "identity_resolver?/iota"]
+iota-client = ["identity_demia_core/iota-client", "identity_resolver?/demia"]
 
 # Enables revocation with `RevocationBitmap2022`.
 revocation-bitmap = [
