@@ -70,7 +70,7 @@ pub(crate) fn ed25519_private_try_from_bytes(bytes: &[u8]) -> Result<ed25519::Se
   let private_key_bytes: [u8; Ed25519::PRIVATE_KEY_LENGTH] = bytes
     .try_into()
     .map_err(|_| crate::Error::InvalidKeyLength(bytes.len(), Ed25519::PRIVATE_KEY_LENGTH))?;
-  Ok(ed25519::SecretKey::from_bytes(private_key_bytes))
+  Ok(ed25519::SecretKey::from_bytes(&private_key_bytes))
 }
 
 /// Reconstructs an Ed25519 public key from a byte array.

@@ -205,7 +205,7 @@ pub(crate) mod ed25519 {
       );
     }
 
-    let sk: [u8; ed25519::SECRET_KEY_LENGTH] = params
+    let sk: [u8; ed25519::SecretKey::LENGTH] = params
       .d
       .as_deref()
       .map(jwu::decode_b64)
@@ -221,10 +221,10 @@ pub(crate) mod ed25519 {
       .try_into()
       .map_err(|_| {
         KeyStorageError::new(KeyStorageErrorKind::Unspecified)
-          .with_custom_message(format!("expected key of length {}", ed25519::SECRET_KEY_LENGTH))
+          .with_custom_message(format!("expected key of length {}", ed25519::SecretKey::LENGTH))
       })?;
 
-    Ok(SecretKey::from_bytes(sk))
+    Ok(SecretKey::from_bytes(&sk))
   }
 
   pub(crate) fn encode_jwk(private_key: &SecretKey, public_key: &PublicKey) -> Jwk {
