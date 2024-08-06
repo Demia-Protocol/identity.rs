@@ -8,6 +8,8 @@ members = [
   "identity_iota",
   "identity_storage",
   "identity_iota_core",
+  "identity_demia",
+  "identity_demia_core",
   "identity_resolver",
   "identity_verification",
   "identity_stronghold",
