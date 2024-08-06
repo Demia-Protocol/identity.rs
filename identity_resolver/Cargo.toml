@@ -43,7 +43,7 @@ iota-sdk = { git = "https://github.com/demia-protocol/demia-sdk", branch = "iota
 tokio = { version = "1.29.0", default-features = false, features = ["rt-multi-thread", "macros"] }
 
 [features]
-default = ["revocation-bitmap", "iota"]
+default = ["revocation-bitmap", "demia"]
 revocation-bitmap = ["identity_credential/revocation-bitmap", "identity_iota_core?/revocation-bitmap", "identity_demia_core?/revocation-bitmap"]
 # Enables the IOTA integration for the resolver.
 iota = ["dep:identity_iota_core"]
