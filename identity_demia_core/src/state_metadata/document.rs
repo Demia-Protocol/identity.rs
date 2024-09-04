@@ -10,8 +10,8 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::error::Result;
-use crate::Error;
 use crate::DemiaDID;
+use crate::Error;
 use crate::IotaDocument;
 use crate::IotaDocumentMetadata;
 

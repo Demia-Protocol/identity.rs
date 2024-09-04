@@ -361,10 +361,10 @@ mod demia_handler {
   use crate::ErrorCause;
 
   use super::Resolver;
-  use identity_document::document::CoreDocument;
   use identity_demia_core::DemiaDID;
   use identity_demia_core::IotaDocument;
   use identity_demia_core::IotaIdentityClientExt;
+  use identity_document::document::CoreDocument;
   use std::collections::HashMap;
   use std::sync::Arc;
   impl<DOC> Resolver<DOC>
@@ -377,18 +377,18 @@ mod demia_handler {
     pub fn attach_demia_handler<CLI>(&mut self, client: CLI)
     where
       CLI: IotaIdentityClientExt + Send + Sync + 'static,
-      {
-        let arc_client: Arc<CLI> = Arc::new(client);
-  
-        let handler = move |did: DemiaDID| {
-          let future_client = arc_client.clone();
-          async move { future_client.resolve_did(&did).await }
-        };
-  
-        self.attach_handler(DemiaDID::METHOD.to_owned(), handler);
-      }
+    {
+      let arc_client: Arc<CLI> = Arc::new(client);
 
-      /// Convenience method for attaching multiple handlers responsible for resolving IOTA DIDs
+      let handler = move |did: DemiaDID| {
+        let future_client = arc_client.clone();
+        async move { future_client.resolve_did(&did).await }
+      };
+
+      self.attach_handler(DemiaDID::METHOD.to_owned(), handler);
+    }
+
+    /// Convenience method for attaching multiple handlers responsible for resolving IOTA DIDs
     /// on multiple networks.
     ///
     ///
@@ -444,6 +444,7 @@ mod demia_handler {
 
 #[cfg(test)]
 mod tests {
+  use super::*;
   use identity_iota_core::block::output::AliasId;
   use identity_iota_core::block::output::AliasOutput;
   use identity_iota_core::block::output::OutputId;
@@ -452,7 +453,6 @@ mod tests {
   use identity_iota_core::IotaDocument;
   use identity_iota_core::IotaIdentityClient;
   use identity_iota_core::IotaIdentityClientExt;
-  use super::*;
 
   struct DummyClient(IotaDocument);
 

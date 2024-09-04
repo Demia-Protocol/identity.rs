@@ -20,8 +20,8 @@ use crate::block::output::UnlockCondition;
 use crate::block::Block;
 use crate::client::identity_client::validate_network;
 use crate::error::Result;
-use crate::Error;
 use crate::DemiaDID;
+use crate::Error;
 use crate::IotaDocument;
 use crate::IotaIdentityClient;
 use crate::IotaIdentityClientExt;
@@ -40,8 +40,12 @@ pub trait IotaClientExt: IotaIdentityClient {
   /// the storage deposit amount specified on `alias_output`.
   ///
   /// This method modifies the on-ledger state.
-  async fn publish_did_output(&self, secret_manager: &SecretManager, alias_output: AliasOutput, ountry_code: &CountryCode)
-    -> Result<IotaDocument>;
+  async fn publish_did_output(
+    &self,
+    secret_manager: &SecretManager,
+    alias_output: AliasOutput,
+    ountry_code: &CountryCode,
+  ) -> Result<IotaDocument>;
 
   /// Destroy the Alias Output containing the given `did`, sending its tokens to a new Basic Output
   /// unlockable by `address`.
@@ -63,7 +67,7 @@ impl IotaClientExt for Client {
     &self,
     secret_manager: &SecretManager,
     alias_output: AliasOutput,
-    country_code: &CountryCode
+    country_code: &CountryCode,
   ) -> Result<IotaDocument> {
     let block: Block = publish_output(self, secret_manager, alias_output)
       .await
@@ -141,7 +145,6 @@ impl IotaIdentityClient for Client {
       Err(Error::NotAnAliasOutput(output_id))
     }
   }
-
 }
 
 /// Publishes an `alias_output`.

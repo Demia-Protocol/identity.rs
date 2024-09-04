@@ -84,7 +84,13 @@ impl DemiaDID {
   /// assert_eq!(did.as_str(), "did:demia:0x0101010101010101010101010101010101010101010101010101010101010101");
   pub fn new(bytes: &[u8; 32], country_code: &CountryCode, network_name: &NetworkName) -> Self {
     let tag = prefix_hex::encode(bytes);
-    let did: String = format!("did:{}:{}:{}:{}", Self::METHOD, country_code.alpha3().to_ascii_lowercase(), network_name, tag);
+    let did: String = format!(
+      "did:{}:{}:{}:{}",
+      Self::METHOD,
+      country_code.alpha3().to_ascii_lowercase(),
+      network_name,
+      tag
+    );
 
     Self::parse(did).expect("DIDs constructed with new should be valid")
   }
@@ -92,7 +98,13 @@ impl DemiaDID {
   /// Constructs a new [`DemiaDID`] from a hex representation of an Alias Id and the given
   /// network name.
   pub fn from_alias_id(alias_id: &str, country_code: &CountryCode, network_name: &NetworkName) -> Self {
-    let did: String = format!("did:{}:{}:{}:{}", Self::METHOD, country_code.alpha3(), network_name, alias_id);
+    let did: String = format!(
+      "did:{}:{}:{}:{}",
+      Self::METHOD,
+      country_code.alpha3(),
+      network_name,
+      alias_id
+    );
     Self::parse(did).expect("DIDs constructed with new should be valid")
   }
 
@@ -109,7 +121,7 @@ impl DemiaDID {
   /// let placeholder = DemiaDID::placeholder(&CountryCode::USA, &NetworkName::try_from("dmia").unwrap());
   /// assert_eq!(placeholder.as_str(), "did:demia:0x0000000000000000000000000000000000000000000000000000000000000000");
   /// assert!(placeholder.is_placeholder());
-  pub fn placeholder( country_code: &CountryCode, network_name: &NetworkName) -> Self {
+  pub fn placeholder(country_code: &CountryCode, network_name: &NetworkName) -> Self {
     Self::new(&[0; 32], country_code, network_name)
   }
 
@@ -268,19 +280,19 @@ impl DemiaDID {
   /// foo -> (DemiaDID::DEFAULT_COUNTRY, DemiaDID::DEFAULT_NETWORK.as_ref(), foo)
   #[inline(always)]
   fn denormalized_components(input: &str) -> (&str, &str, &str) {
-    match input
-      .find(':') {
-        Some(idx) => {
-          let (country, input) = input.split_at(idx);
-          let rest = input[1..].find(':')
-            .map(|idx| input[1..].split_at(idx))
-            .map(|(network, tail)| (network, &tail[1..]))
-            // Self::DEFAULT_NETWORK is built from a static reference so unwrapping is fine
-            .unwrap_or((Self::DEFAULT_NETWORK, input));
-          (country, rest.0, rest.1)
-        },
-        None => (Self::DEFAULT_COUNTRY, Self::DEFAULT_NETWORK, input)
+    match input.find(':') {
+      Some(idx) => {
+        let (country, input) = input.split_at(idx);
+        let rest = input[1..]
+          .find(':')
+          .map(|idx| input[1..].split_at(idx))
+          .map(|(network, tail)| (network, &tail[1..]))
+          // Self::DEFAULT_NETWORK is built from a static reference so unwrapping is fine
+          .unwrap_or((Self::DEFAULT_NETWORK, input));
+        (country, rest.0, rest.1)
       }
+      None => (Self::DEFAULT_COUNTRY, Self::DEFAULT_NETWORK, input),
+    }
   }
 }
 
@@ -392,7 +404,14 @@ mod tests {
 
   const LEN_VALID_ALIAS_STR: usize = VALID_ALIAS_ID_STR.len();
 
-  static VALID_IOTA_DID_STRING: Lazy<String> = Lazy::new(|| format!("did:{}:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), VALID_ALIAS_ID_STR));
+  static VALID_IOTA_DID_STRING: Lazy<String> = Lazy::new(|| {
+    format!(
+      "did:{}:{}:{}",
+      DemiaDID::METHOD,
+      &CountryCode::USA.alpha3().to_lowercase(),
+      VALID_ALIAS_ID_STR
+    )
+  });
 
   // Rules are: at least one character, at most six characters and may only contain digits and/or lowercase ascii
   // characters.
@@ -413,7 +432,15 @@ mod tests {
   ];
 
   static VALID_IOTA_DID_STRINGS: Lazy<Vec<String>> = Lazy::new(|| {
-    let network_tag_to_did = |network, tag| format!("did:{}:{}:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), network, tag);
+    let network_tag_to_did = |network, tag| {
+      format!(
+        "did:{}:{}:{}:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        network,
+        tag
+      )
+    };
 
     let valid_strings: Vec<String> = VALID_NETWORK_NAMES
       .iter()
@@ -484,7 +511,8 @@ mod tests {
       "Main", "fOo", "deV", "féta", "", "  ", "foo ", " foo", "1234567", "foobar0",
     ];
     for network_name in INVALID_NETWORK_NAMES {
-      let did_string: String = format!("did:method:usa:{network_name}:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK");
+      let did_string: String =
+        format!("did:method:usa:{network_name}:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK");
       let did_core: CoreDID = {
         match CoreDID::parse(did_string) {
           Ok(did_core) => did_core,
@@ -529,7 +557,7 @@ mod tests {
       format!("did:method:usa:main:test:{VALID_ALIAS_ID_STR}"),
       // Tag is not prefixed
       format!("did:method:{}", &VALID_ALIAS_ID_STR.strip_prefix("0x").unwrap()),
-      // Tag is too long 
+      // Tag is too long
       format!(
         "did:method:{}",
         &VALID_ALIAS_ID_STR.chars().chain("a".chars()).collect::<String>()
@@ -555,7 +583,11 @@ mod tests {
   #[test]
   fn placeholder_produces_a_did_with_expected_string_representation() {
     assert_eq!(
-      DemiaDID::placeholder(&CountryCode::for_alpha3_caseless(DemiaDID::DEFAULT_COUNTRY).unwrap(), &NetworkName::try_from(DemiaDID::DEFAULT_NETWORK).unwrap()).as_str(),
+      DemiaDID::placeholder(
+        &CountryCode::for_alpha3_caseless(DemiaDID::DEFAULT_COUNTRY).unwrap(),
+        &NetworkName::try_from(DemiaDID::DEFAULT_NETWORK).unwrap()
+      )
+      .as_str(),
       format!("did:{}:{}", DemiaDID::METHOD, DemiaDID::PLACEHOLDER_TAG)
     );
 
@@ -567,7 +599,13 @@ mod tests {
       let did: DemiaDID = DemiaDID::placeholder(&CountryCode::USA, &network_name);
       assert_eq!(
         did.as_str(),
-        format!("did:{}:{}:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), name, DemiaDID::PLACEHOLDER_TAG)
+        format!(
+          "did:{}:{}:{}:{}",
+          DemiaDID::METHOD,
+          &CountryCode::USA.alpha3().to_lowercase(),
+          name,
+          DemiaDID::PLACEHOLDER_TAG
+        )
       );
     }
   }
@@ -601,7 +639,12 @@ mod tests {
   fn parse_invalid() {
     let execute_assertions = |valid_alias_id: &str| {
       assert!(matches!(
-        DemiaDID::parse(format!("dod:{}:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)),
+        DemiaDID::parse(format!(
+          "dod:{}:{}:{}",
+          DemiaDID::METHOD,
+          &CountryCode::USA.alpha3().to_lowercase(),
+          valid_alias_id
+        )),
         Err(DIDError::InvalidScheme)
       ));
 
@@ -612,13 +655,23 @@ mod tests {
 
       // invalid network name (exceeded six characters)
       assert!(matches!(
-        DemiaDID::parse(format!("did:{}:1234567:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)),
+        DemiaDID::parse(format!(
+          "did:{}:1234567:{}:{}",
+          DemiaDID::METHOD,
+          &CountryCode::USA.alpha3().to_lowercase(),
+          valid_alias_id
+        )),
         Err(DIDError::Other(_))
       ));
 
       // invalid network name (contains non ascii character é)
       assert!(matches!(
-        DemiaDID::parse(format!("did:{}:féta:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)),
+        DemiaDID::parse(format!(
+          "did:{}:féta:{}:{}",
+          DemiaDID::METHOD,
+          &CountryCode::USA.alpha3().to_lowercase(),
+          valid_alias_id
+        )),
         Err(DIDError::InvalidMethodId)
       ));
 
@@ -630,7 +683,12 @@ mod tests {
 
       // too many segments in method_id
       assert!(matches!(
-        DemiaDID::parse(format!("did:{}:{}:test:foo:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)),
+        DemiaDID::parse(format!(
+          "did:{}:{}:test:foo:{}",
+          DemiaDID::METHOD,
+          &CountryCode::USA.alpha3().to_lowercase(),
+          valid_alias_id
+        )),
         Err(DIDError::InvalidMethodId)
       ));
     };
@@ -766,19 +824,34 @@ mod tests {
       let did: DemiaDID = format!("did:{}:{}", DemiaDID::METHOD, valid_alias_id).parse().unwrap();
       assert_eq!(did.network_str(), DemiaDID::DEFAULT_NETWORK);
 
-      let did: DemiaDID = format!("did:{}:{}:dev:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:dev:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.network_str(), "dev");
 
-      let did: DemiaDID = format!("did:{}:{}:test:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:test:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.network_str(), "test");
 
-      let did: DemiaDID = format!("did:{}:{}:custom:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:custom:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.network_str(), "custom");
     };
 
@@ -793,20 +866,35 @@ mod tests {
       assert_eq!(did.country_str(), DemiaDID::DEFAULT_COUNTRY);
 
       // Properly lowercase country
-      let did: DemiaDID = format!("did:{}:{}:dev:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:dev:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.country_str(), "usa");
 
       // Upper case transformed to lower case
-      let did: DemiaDID = format!("did:{}:{}:test:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3(), valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:test:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3(),
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.country_str(), "usa");
 
-      let did: DemiaDID = format!("did:{}:{}:custom:{}", DemiaDID::METHOD, isocountry::alpha3::ISO_A3_USA, valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:custom:{}",
+        DemiaDID::METHOD,
+        isocountry::alpha3::ISO_A3_USA,
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.country_str(), "usa");
     };
 
@@ -821,7 +909,7 @@ mod tests {
       assert_eq!(did.tag(), valid_alias_id);
 
       let did: DemiaDID = format!(
-        "did:{}:{}:{}:{}", 
+        "did:{}:{}:{}:{}",
         DemiaDID::METHOD,
         DemiaDID::DEFAULT_COUNTRY,
         DemiaDID::DEFAULT_NETWORK,
@@ -831,14 +919,24 @@ mod tests {
       .unwrap();
       assert_eq!(did.tag(), valid_alias_id);
 
-      let did: DemiaDID = format!("did:{}:{}:dev:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:dev:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.tag(), valid_alias_id);
 
-      let did: DemiaDID = format!("did:{}:{}:custom:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)
-        .parse()
-        .unwrap();
+      let did: DemiaDID = format!(
+        "did:{}:{}:custom:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      )
+      .parse()
+      .unwrap();
       assert_eq!(did.tag(), valid_alias_id);
     };
     execute_assertions(DemiaDID::PLACEHOLDER_TAG);
@@ -852,7 +950,13 @@ mod tests {
   #[test]
   fn test_parse_did_url_valid() {
     let execute_assertions = |valid_alias_id: &str| {
-      assert!(DIDUrl::parse(format!("did:{}:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)).is_ok());
+      assert!(DIDUrl::parse(format!(
+        "did:{}:{}:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      ))
+      .is_ok());
       assert!(DIDUrl::parse(format!("did:{}:{}#fragment", DemiaDID::METHOD, valid_alias_id)).is_ok());
       assert!(DIDUrl::parse(format!(
         "did:{}:{}?somequery=somevalue",
@@ -867,7 +971,13 @@ mod tests {
       ))
       .is_ok());
 
-      assert!(DIDUrl::parse(format!("did:{}:main:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)).is_ok());
+      assert!(DIDUrl::parse(format!(
+        "did:{}:main:{}:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      ))
+      .is_ok());
       assert!(DIDUrl::parse(format!("did:{}:main:{}#fragment", DemiaDID::METHOD, valid_alias_id)).is_ok());
       assert!(DIDUrl::parse(format!(
         "did:{}:main:{}?somequery=somevalue",
@@ -882,7 +992,13 @@ mod tests {
       ))
       .is_ok());
 
-      assert!(DIDUrl::parse(format!("did:{}:dev:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)).is_ok());
+      assert!(DIDUrl::parse(format!(
+        "did:{}:dev:{}:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      ))
+      .is_ok());
       assert!(DIDUrl::parse(format!("did:{}:dev:{}#fragment", DemiaDID::METHOD, valid_alias_id)).is_ok());
       assert!(DIDUrl::parse(format!(
         "did:{}:dev:{}?somequery=somevalue",
@@ -897,7 +1013,13 @@ mod tests {
       ))
       .is_ok());
 
-      assert!(DIDUrl::parse(format!("did:{}:custom:{}:{}", DemiaDID::METHOD, &CountryCode::USA.alpha3().to_lowercase(), valid_alias_id)).is_ok());
+      assert!(DIDUrl::parse(format!(
+        "did:{}:custom:{}:{}",
+        DemiaDID::METHOD,
+        &CountryCode::USA.alpha3().to_lowercase(),
+        valid_alias_id
+      ))
+      .is_ok());
       assert!(DIDUrl::parse(format!("did:{}:custom:{}#fragment", DemiaDID::METHOD, valid_alias_id)).is_ok());
       assert!(DIDUrl::parse(format!(
         "did:{}:custom:{}?somequery=somevalue",

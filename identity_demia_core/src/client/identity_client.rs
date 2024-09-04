@@ -16,8 +16,8 @@ use crate::block::output::OutputId;
 use crate::block::output::RentStructure;
 use crate::block::output::UnlockCondition;
 use crate::block::protocol::ProtocolParameters;
-use crate::Error;
 use crate::DemiaDID;
+use crate::Error;
 use crate::IotaDocument;
 use crate::NetworkName;
 use crate::Result;
@@ -102,9 +102,7 @@ pub trait IotaIdentityClientExt: IotaIdentityClient {
       alias_output_builder = alias_output_builder.with_alias_id(id);
     }
 
-    alias_output_builder
-      .finish()
-      .map_err(Error::AliasOutputBuildError)
+    alias_output_builder.finish().map_err(Error::AliasOutputBuildError)
   }
 
   /// Removes the DID document from the state metadata of its Alias Output,
@@ -131,9 +129,7 @@ pub trait IotaIdentityClientExt: IotaIdentityClient {
       alias_output_builder = alias_output_builder.with_alias_id(alias_id);
     }
 
-    alias_output_builder
-      .finish()
-      .map_err(Error::AliasOutputBuildError)
+    alias_output_builder.finish().map_err(Error::AliasOutputBuildError)
   }
 
   /// Resolve a [`IotaDocument`]. Returns an empty, deactivated document if the state metadata

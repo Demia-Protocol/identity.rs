@@ -31,8 +31,8 @@ use identity_verification::MethodScope;
 use identity_verification::VerificationMethod;
 
 use crate::error::Result;
-use crate::Error;
 use crate::DemiaDID;
+use crate::Error;
 use crate::IotaDocumentMetadata;
 use crate::NetworkName;
 use crate::StateMetadataDocument;
@@ -381,18 +381,20 @@ mod client_document {
         StateMetadataDocument::unpack(alias_output.state_metadata()).and_then(|doc| doc.into_demia_document(did))?
       };
 
-      document.set_controller_and_governor_addresses(alias_output, 
-        &CountryCode::for_alpha3_caseless(did.country_str()).map_err(Error::InvalidCountryCode)?, 
-        &did.network_str().to_owned().try_into()?)?;
+      document.set_controller_and_governor_addresses(
+        alias_output,
+        &CountryCode::for_alpha3_caseless(did.country_str()).map_err(Error::InvalidCountryCode)?,
+        &did.network_str().to_owned().try_into()?,
+      )?;
 
       Ok(document)
     }
 
     fn set_controller_and_governor_addresses(
-      &mut self, 
-      alias_output: &AliasOutput, 
-      country_code: &CountryCode, 
-      network_name: &NetworkName
+      &mut self,
+      alias_output: &AliasOutput,
+      country_code: &CountryCode,
+      network_name: &NetworkName,
     ) -> Result<()> {
       let hrp: Hrp = network_name.try_into()?;
       self.metadata.governor_address = Some(alias_output.governor_address().to_bech32(hrp).to_string());
@@ -420,7 +422,11 @@ mod client_document {
     /// outputs, if any.
     ///
     /// Errors if any Alias Output does not contain a valid or empty DID Document.
-    pub fn unpack_from_block(country_code: &CountryCode, network: &NetworkName, block: &Block) -> Result<Vec<IotaDocument>> {
+    pub fn unpack_from_block(
+      country_code: &CountryCode,
+      network: &NetworkName,
+      block: &Block,
+    ) -> Result<Vec<IotaDocument>> {
       let mut documents = Vec::new();
 
       if let Some(Payload::Transaction(tx_payload)) = block.payload() {
