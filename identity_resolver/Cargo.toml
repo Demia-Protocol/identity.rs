@@ -39,7 +39,7 @@ optional = true
 
 [dev-dependencies]
 identity_iota_core = { path = "../identity_iota_core", features = ["test"] }
-iota-sdk = { git = "https://github.com/demia-protocol/demia-sdk", branch = "iota-sdk", default-features = false, features = ["tls"] }
+iota-sdk = { git = "https://github.com/demia-protocol/demia-sdk", default-features = false, features = ["tls"] }
 tokio = { version = "1.29.0", default-features = false, features = ["rt-multi-thread", "macros"] }
 
 [features]
