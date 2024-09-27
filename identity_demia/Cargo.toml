@@ -1,6 +1,6 @@
 [package]
 name = "identity_demia"
-version = "0.0.1-alpha.1"
+version = "1.3.1"
 authors.workspace = true
 edition.workspace = true
 homepage.workspace = true
@@ -16,14 +16,15 @@ identity_core = { version = "=1.3.1", path = "../identity_core", default-feature
 identity_credential = { version = "=1.3.1", path = "../identity_credential", features = ["validator"], default-features = false }
 identity_did = { version = "=1.3.1", path = "../identity_did", default-features = false }
 identity_document = { version = "=1.3.1", path = "../identity_document", default-features = false }
-identity_demia_core = { version = "=0.0.1-alpha.1", path = "../identity_demia_core", default-features = false }
+identity_demia_core = { version = "=1.3.1", path = "../identity_demia_core", default-features = false }
 identity_resolver = { version = "=1.3.1", path = "../identity_resolver", default-features = false, optional = true }
-identity_storage = { version = "=1.3.1", path = "../identity_storage", default-features = false, features = ["iota-document"] }
+identity_storage = { version = "=1.3.1", path = "../identity_storage", default-features = false, features = ["demia-document"] }
 identity_verification = { version = "=1.3.1", path = "../identity_verification", default-features = false }
 
 [dev-dependencies]
 anyhow = "1.0.64"
 iota-sdk = { git = "https://github.com/demia-protocol/demia-sdk", default-features = false, features = ["tls", "stronghold"] }
+# iota-sdk = { path = "../../iota-sdk/sdk", features = ["tls", "stronghold"], default-features = false }
 rand = "0.8.5"
 tokio = { version = "1.29.0", features = ["full"] }
 

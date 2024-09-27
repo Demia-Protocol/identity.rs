@@ -1,9 +1,6 @@
 // Copyright 2020-2023 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-// Copyright 2020-2023 IOTA Stiftung
-// SPDX-License-Identifier: Apache-2.0
-
 use isocountry::CountryCode;
 
 use core::fmt;
@@ -32,25 +29,25 @@ use identity_verification::VerificationMethod;
 
 use crate::error::Result;
 use crate::DemiaDID;
+use crate::DemiaDocumentMetadata;
 use crate::Error;
-use crate::IotaDocumentMetadata;
 use crate::NetworkName;
 use crate::StateMetadataDocument;
 use crate::StateMetadataEncoding;
 
 #[derive(Debug, Deserialize)]
-/// Struct used internally when deserializing [`IotaDocument`].
-struct ProvisionalIotaDocument {
+/// Struct used internally when deserializing [`DemiaDocument`].
+struct ProvisionalDemiaDocument {
   #[serde(rename = "doc")]
   document: CoreDocument,
   #[serde(rename = "meta")]
-  metadata: IotaDocumentMetadata,
+  metadata: DemiaDocumentMetadata,
 }
 
-impl TryFrom<ProvisionalIotaDocument> for IotaDocument {
+impl TryFrom<ProvisionalDemiaDocument> for DemiaDocument {
   type Error = Error;
-  fn try_from(provisional: ProvisionalIotaDocument) -> std::result::Result<Self, Self::Error> {
-    let ProvisionalIotaDocument { document, metadata } = provisional;
+  fn try_from(provisional: ProvisionalDemiaDocument) -> std::result::Result<Self, Self::Error> {
+    let ProvisionalDemiaDocument { document, metadata } = provisional;
 
     DemiaDID::check_validity(document.id()).map_err(|_| {
       Error::SerializationError(
@@ -71,24 +68,25 @@ impl TryFrom<ProvisionalIotaDocument> for IotaDocument {
         )
       })?;
     }
-    Ok(IotaDocument { document, metadata })
+    Ok(DemiaDocument { document, metadata })
   }
 }
-/// A DID Document adhering to the IOTA DID method specification.
+
+/// A DID Document adhering to the Demia DID method specification.
 ///
 /// This extends [`CoreDocument`].
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(try_from = "ProvisionalIotaDocument")]
-pub struct IotaDocument {
+#[serde(try_from = "ProvisionalDemiaDocument")]
+pub struct DemiaDocument {
   /// The DID document.
   #[serde(rename = "doc")]
   pub(crate) document: CoreDocument,
   /// The metadata of an IOTA DID document.
   #[serde(rename = "meta")]
-  pub metadata: IotaDocumentMetadata,
+  pub metadata: DemiaDocumentMetadata,
 }
 
-impl IotaDocument {
+impl DemiaDocument {
   // ===========================================================================
   // Constructors
   // ===========================================================================
@@ -107,8 +105,8 @@ impl IotaDocument {
     let document: CoreDocument = CoreDocument::builder(Object::default())
       .id(id.into())
       .build()
-      .expect("empty IotaDocument constructor failed");
-    let metadata: IotaDocumentMetadata = IotaDocumentMetadata::new();
+      .expect("empty DemiaDocument constructor failed");
+    let metadata: DemiaDocumentMetadata = DemiaDocumentMetadata::new();
     Self { document, metadata }
   }
 
@@ -239,6 +237,17 @@ impl IotaDocument {
     self.core_document_mut().remove_method(did_url)
   }
 
+  /// Removes and returns the [`VerificationMethod`] from the document. The [`MethodScope`] under which the method was
+  /// found is appended to the second position of the returned tuple.
+  ///
+  /// # Note
+  ///
+  /// All _references to the method_ found in the document will be removed.
+  /// This includes cases where the reference is to a method contained in another DID document.
+  pub fn remove_method_and_scope(&mut self, did_url: &DIDUrl) -> Option<(VerificationMethod, MethodScope)> {
+    self.core_document_mut().remove_method_and_scope(did_url)
+  }
+
   /// Attaches the relationship to the given method, if the method exists.
   ///
   /// Note: The method needs to be in the set of verification methods,
@@ -357,7 +366,7 @@ mod client_document {
 
   use super::*;
 
-  impl IotaDocument {
+  impl DemiaDocument {
     // ===========================================================================
     // Unpacking
     // ===========================================================================
@@ -370,9 +379,9 @@ mod client_document {
     /// NOTE: `did` is required since it is omitted from the serialized DID Document and
     /// cannot be inferred from the state metadata. It also indicates the network, which is not
     /// encoded in the `AliasId` alone.
-    pub fn unpack_from_output(did: &DemiaDID, alias_output: &AliasOutput, allow_empty: bool) -> Result<IotaDocument> {
-      let mut document: IotaDocument = if alias_output.state_metadata().is_empty() && allow_empty {
-        let mut empty_document = IotaDocument::new_with_id(did.clone());
+    pub fn unpack_from_output(did: &DemiaDID, alias_output: &AliasOutput, allow_empty: bool) -> Result<DemiaDocument> {
+      let mut document: DemiaDocument = if alias_output.state_metadata().is_empty() && allow_empty {
+        let mut empty_document = DemiaDocument::new_with_id(did.clone());
         empty_document.metadata.created = None;
         empty_document.metadata.updated = None;
         empty_document.metadata.deactivated = Some(true);
@@ -426,7 +435,7 @@ mod client_document {
       country_code: &CountryCode,
       network: &NetworkName,
       block: &Block,
-    ) -> Result<Vec<IotaDocument>> {
+    ) -> Result<Vec<DemiaDocument>> {
       let mut documents = Vec::new();
 
       if let Some(Payload::Transaction(tx_payload)) = block.payload() {
@@ -449,7 +458,7 @@ mod client_document {
             };
 
             let did: DemiaDID = DemiaDID::new(&alias_id, country_code, network);
-            documents.push(IotaDocument::unpack_from_output(&did, alias_output, true)?);
+            documents.push(DemiaDocument::unpack_from_output(&did, alias_output, true)?);
           }
         }
       }
@@ -459,23 +468,23 @@ mod client_document {
   }
 }
 
-impl AsRef<CoreDocument> for IotaDocument {
+impl AsRef<CoreDocument> for DemiaDocument {
   fn as_ref(&self) -> &CoreDocument {
     &self.document
   }
 }
 
 #[cfg(feature = "revocation-bitmap")]
-mod iota_document_revocation {
+mod demia_document_revocation {
   use identity_credential::revocation::RevocationDocumentExt;
   use identity_document::utils::DIDUrlQuery;
 
   use crate::Error;
   use crate::Result;
 
-  use super::IotaDocument;
+  use super::DemiaDocument;
 
-  impl IotaDocument {
+  impl DemiaDocument {
     /// If the document has a [`RevocationBitmap`](identity_credential::revocation::RevocationBitmap)
     /// service identified by `service_query`, revoke all specified `indices`.
     pub fn revoke_credentials<'query, 'me, Q>(&mut self, service_query: Q, indices: &[u32]) -> Result<()>
@@ -502,22 +511,22 @@ mod iota_document_revocation {
   }
 }
 
-impl From<IotaDocument> for CoreDocument {
-  fn from(document: IotaDocument) -> Self {
+impl From<DemiaDocument> for CoreDocument {
+  fn from(document: DemiaDocument) -> Self {
     document.document
   }
 }
 
-impl TryFrom<(CoreDocument, IotaDocumentMetadata)> for IotaDocument {
+impl TryFrom<(CoreDocument, DemiaDocumentMetadata)> for DemiaDocument {
   type Error = Error;
-  /// Converts the tuple into an [`IotaDocument`] if the given [`CoreDocument`] has an identifier satisfying the
+  /// Converts the tuple into an [`DemiaDocument`] if the given [`CoreDocument`] has an identifier satisfying the
   /// requirements of the IOTA UTXO method and the same holds for all of the [`CoreDocument's`](CoreDocument)
   /// controllers.
   ///
   /// # Important
-  /// This does not check the relationship between the [`CoreDocument`] and the [`IotaDocumentMetadata`].
-  fn try_from(value: (CoreDocument, IotaDocumentMetadata)) -> std::result::Result<Self, Self::Error> {
-    ProvisionalIotaDocument {
+  /// This does not check the relationship between the [`CoreDocument`] and the [`DemiaDocumentMetadata`].
+  fn try_from(value: (CoreDocument, DemiaDocumentMetadata)) -> std::result::Result<Self, Self::Error> {
+    ProvisionalDemiaDocument {
       document: value.0,
       metadata: value.1,
     }
@@ -525,7 +534,7 @@ impl TryFrom<(CoreDocument, IotaDocumentMetadata)> for IotaDocument {
   }
 }
 
-impl Display for IotaDocument {
+impl Display for DemiaDocument {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     self.fmt_json(f)
   }
@@ -556,8 +565,8 @@ mod tests {
       .unwrap()
   }
 
-  fn generate_document(id: &DemiaDID) -> IotaDocument {
-    let mut metadata: IotaDocumentMetadata = IotaDocumentMetadata::new();
+  fn generate_document(id: &DemiaDID) -> DemiaDocument {
+    let mut metadata: DemiaDocumentMetadata = DemiaDocumentMetadata::new();
     metadata.created = Some(Timestamp::parse("2020-01-02T00:00:00Z").unwrap());
     metadata.updated = Some(Timestamp::parse("2020-01-02T00:00:00Z").unwrap());
 
@@ -572,7 +581,7 @@ mod tests {
       .build()
       .unwrap();
 
-    IotaDocument { document, metadata }
+    DemiaDocument { document, metadata }
   }
 
   #[test]
@@ -581,7 +590,7 @@ mod tests {
     let network: NetworkName = NetworkName::try_from("test").unwrap();
     let country: CountryCode = CountryCode::USA;
     let placeholder: DemiaDID = DemiaDID::placeholder(&country, &network);
-    let doc1: IotaDocument = IotaDocument::new(&country, &network);
+    let doc1: DemiaDocument = DemiaDocument::new(&country, &network);
     assert_eq!(doc1.id().network_str(), network.as_ref());
     assert_eq!(doc1.id().tag(), placeholder.tag());
     assert_eq!(doc1.id(), &placeholder);
@@ -590,7 +599,7 @@ mod tests {
 
     // VALID new_with_id().
     let did: DemiaDID = valid_did();
-    let doc2: IotaDocument = IotaDocument::new_with_id(did.clone());
+    let doc2: DemiaDocument = DemiaDocument::new_with_id(did.clone());
     assert_eq!(doc2.id(), &did);
     assert_eq!(doc2.methods(None).len(), 0);
     assert!(doc2.service().is_empty());
@@ -599,7 +608,7 @@ mod tests {
   #[test]
   fn test_methods() {
     let controller: DemiaDID = valid_did();
-    let document: IotaDocument = generate_document(&controller);
+    let document: DemiaDocument = generate_document(&controller);
     let expected: Vec<VerificationMethod> = vec![
       generate_method(&controller, "#key-1"),
       generate_method(&controller, "#key-2"),
@@ -618,7 +627,7 @@ mod tests {
   #[test]
   fn test_services() {
     // VALID: add one service.
-    let mut document: IotaDocument = IotaDocument::new_with_id(valid_did());
+    let mut document: DemiaDocument = DemiaDocument::new_with_id(valid_did());
     let url1: DIDUrl = document.id().to_url().join("#linked-domain").unwrap();
     let service1: Service = Service::from_json(&format!(
       r#"{{
@@ -681,7 +690,7 @@ mod tests {
 
   #[test]
   fn test_document_equality() {
-    let mut original_doc: IotaDocument = IotaDocument::new_with_id(valid_did());
+    let mut original_doc: DemiaDocument = DemiaDocument::new_with_id(valid_did());
     let method1: VerificationMethod = generate_method(original_doc.id(), "test-0");
     original_doc
       .insert_method(method1, MethodScope::capability_invocation())
@@ -729,7 +738,7 @@ mod tests {
       )))
       .finish()
       .unwrap();
-    let document: IotaDocument = IotaDocument::unpack_from_output(&did, &alias_output, true).unwrap();
+    let document: DemiaDocument = DemiaDocument::unpack_from_output(&did, &alias_output, true).unwrap();
     assert_eq!(document.id(), &did);
     assert_eq!(document.metadata.deactivated, Some(true));
 
@@ -740,12 +749,12 @@ mod tests {
     assert_eq!(document.to_json().unwrap(), json);
 
     // INVALID: reject empty document.
-    assert!(IotaDocument::unpack_from_output(&did, &alias_output, false).is_err());
+    assert!(DemiaDocument::unpack_from_output(&did, &alias_output, false).is_err());
 
     // Ensure re-packing removes the controller, state controller address, and governor address.
     let packed: Vec<u8> = document.pack_with_encoding(StateMetadataEncoding::Json).unwrap();
     let state_metadata_document: StateMetadataDocument = StateMetadataDocument::unpack(&packed).unwrap();
-    let unpacked_document: IotaDocument = state_metadata_document.into_demia_document(&did).unwrap();
+    let unpacked_document: DemiaDocument = state_metadata_document.into_demia_document(&did).unwrap();
     assert!(unpacked_document.document.controller().is_none());
     assert!(unpacked_document.metadata.state_controller_address.is_none());
     assert!(unpacked_document.metadata.governor_address.is_none());
@@ -753,17 +762,17 @@ mod tests {
 
   #[test]
   fn test_json_roundtrip() {
-    let document: IotaDocument = generate_document(&valid_did());
+    let document: DemiaDocument = generate_document(&valid_did());
 
     let ser: String = document.to_json().unwrap();
-    let de: IotaDocument = IotaDocument::from_json(&ser).unwrap();
+    let de: DemiaDocument = DemiaDocument::from_json(&ser).unwrap();
     assert_eq!(document, de);
   }
 
   #[test]
   fn test_json_fieldnames() {
     // Changing the serialization is a breaking change!
-    let document: IotaDocument = IotaDocument::new_with_id(valid_did());
+    let document: DemiaDocument = DemiaDocument::new_with_id(valid_did());
     let serialization: String = document.to_json().unwrap();
     assert_eq!(
       serialization,
@@ -792,7 +801,7 @@ mod tests {
       }
     }"#;
 
-    let deserialization_result = IotaDocument::from_json(&JSON_DOC_INVALID_ID);
+    let deserialization_result = DemiaDocument::from_json(&JSON_DOC_INVALID_ID);
 
     assert!(deserialization_result.is_err());
 
@@ -816,7 +825,7 @@ mod tests {
       }
     }"#;
 
-    let corrected_deserialization_result = IotaDocument::from_json(&JSON_DOC_CORRECT_ID);
+    let corrected_deserialization_result = DemiaDocument::from_json(&JSON_DOC_CORRECT_ID);
     assert!(corrected_deserialization_result.is_ok());
   }
 
@@ -845,7 +854,7 @@ mod tests {
   }
   "#;
 
-    let deserialization_result = IotaDocument::from_json(&JSON_DOC_INVALID_CONTROLLER_ID);
+    let deserialization_result = DemiaDocument::from_json(&JSON_DOC_INVALID_CONTROLLER_ID);
     assert!(deserialization_result.is_err());
 
     // Check that deserialization works after correcting the json document to have a valid IOTA DID as the controller.
@@ -871,7 +880,7 @@ mod tests {
   }
 }
 "#;
-    let corrected_deserialization_result = IotaDocument::from_json(JSON_DOC_CORRECT_CONTROLLER_ID);
+    let corrected_deserialization_result = DemiaDocument::from_json(JSON_DOC_CORRECT_CONTROLLER_ID);
     assert!(corrected_deserialization_result.is_ok());
   }
 
@@ -889,7 +898,7 @@ mod tests {
     }
     "#;
 
-    let doc = IotaDocument::from_json(DOC_JSON).unwrap();
+    let doc = DemiaDocument::from_json(DOC_JSON).unwrap();
     assert!(doc.controller().next().is_none());
   }
 
@@ -909,7 +918,7 @@ mod tests {
     }
   }
   "#;
-    let doc = IotaDocument::from_json(DOC_JSON).unwrap();
+    let doc = DemiaDocument::from_json(DOC_JSON).unwrap();
     let expected_controller =
       DemiaDID::parse("did:demia:usa:rms:0xfbaaa919b51112d51a8f18b1500d98f0b2e91d793bc5b27fd5ab04cb1b806343").unwrap();
     let controllers: Vec<&DemiaDID> = doc.controller().collect();
@@ -975,12 +984,12 @@ mod tests {
       CoreDocument::from_json(DOC_JSON_NOT_IOTA_DOCUMENT_BECAUSE_OF_CONTROLLER).unwrap();
     let doc_with_iota_id_and_controller: CoreDocument =
       CoreDocument::from_json(DOCUMENT_WITH_IOTA_ID_AND_CONTROLLER_JSON).unwrap();
-    let metadata: IotaDocumentMetadata = IotaDocumentMetadata::from_json(METADATA_JSON).unwrap();
+    let metadata: DemiaDocumentMetadata = DemiaDocumentMetadata::from_json(METADATA_JSON).unwrap();
 
-    assert!(IotaDocument::try_from((doc_not_iota_because_of_id, metadata.clone())).is_err());
+    assert!(DemiaDocument::try_from((doc_not_iota_because_of_id, metadata.clone())).is_err());
 
-    assert!(IotaDocument::try_from((doc_not_iota_because_of_controller, metadata.clone())).is_err());
+    assert!(DemiaDocument::try_from((doc_not_iota_because_of_controller, metadata.clone())).is_err());
 
-    assert!(IotaDocument::try_from((doc_with_iota_id_and_controller, metadata)).is_ok());
+    assert!(DemiaDocument::try_from((doc_with_iota_id_and_controller, metadata)).is_ok());
   }
 }

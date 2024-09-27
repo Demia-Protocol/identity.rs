@@ -11,9 +11,9 @@ use identity_core::convert::FmtJson;
 use serde::Deserialize;
 use serde::Serialize;
 
-/// Additional attributes related to a [`IotaDocument`][crate::IotaDocument].
+/// Additional attributes related to a [`DemiaDocument`][crate::DemiaDocument].
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct IotaDocumentMetadata {
+pub struct DemiaDocumentMetadata {
   /// The timestamp of document creation.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub created: Option<Timestamp>,
@@ -33,8 +33,8 @@ pub struct IotaDocumentMetadata {
   properties: Object,
 }
 
-impl IotaDocumentMetadata {
-  /// Creates a new `IotaDocumentMetadata` with the current system datetime used for `created`
+impl DemiaDocumentMetadata {
+  /// Creates a new `DemiaDocumentMetadata` with the current system datetime used for `created`
   /// and `updated` timestamps.
   pub fn new() -> Self {
     let now: Timestamp = Timestamp::now_utc();
@@ -59,13 +59,13 @@ impl IotaDocumentMetadata {
   }
 }
 
-impl Default for IotaDocumentMetadata {
+impl Default for DemiaDocumentMetadata {
   fn default() -> Self {
     Self::new()
   }
 }
 
-impl Display for IotaDocumentMetadata {
+impl Display for DemiaDocumentMetadata {
   fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
     self.fmt_json(f)
   }

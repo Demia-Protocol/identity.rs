@@ -11,9 +11,9 @@ use serde::Serialize;
 
 use crate::error::Result;
 use crate::DemiaDID;
+use crate::DemiaDocument;
+use crate::DemiaDocumentMetadata;
 use crate::Error;
-use crate::IotaDocument;
-use crate::IotaDocumentMetadata;
 
 use super::StateMetadataEncoding;
 use super::StateMetadataVersion;
@@ -32,12 +32,12 @@ pub struct StateMetadataDocument {
   #[serde(rename = "doc")]
   pub(crate) document: CoreDocument,
   #[serde(rename = "meta")]
-  pub(crate) metadata: IotaDocumentMetadata,
+  pub(crate) metadata: DemiaDocumentMetadata,
 }
 
 impl StateMetadataDocument {
-  /// Transforms the document into a [`IotaDocument`] by replacing all placeholders with `original_did`.
-  pub fn into_demia_document(self, original_did: &DemiaDID) -> Result<IotaDocument> {
+  /// Transforms the document into a [`DemiaDocument`] by replacing all placeholders with `original_did`.
+  pub fn into_demia_document(self, original_did: &DemiaDID) -> Result<DemiaDocument> {
     let Self { document, metadata } = self;
     // Transform identifiers: Replace placeholder identifiers, and ensure that `id` and `controller` adhere to the
     // specification.
@@ -69,7 +69,7 @@ impl StateMetadataDocument {
       crate::error::Error::InvalidDoc,
     )?;
 
-    Ok(IotaDocument { document, metadata })
+    Ok(DemiaDocument { document, metadata })
   }
 
   /// Pack a [`StateMetadataDocument`] into bytes, suitable for inclusion in
@@ -183,12 +183,12 @@ fn add_flags_to_message(
   Ok(buffer)
 }
 
-impl From<IotaDocument> for StateMetadataDocument {
-  /// Transforms a [`IotaDocument`] into its state metadata representation by replacing all
+impl From<DemiaDocument> for StateMetadataDocument {
+  /// Transforms a [`DemiaDocument`] into its state metadata representation by replacing all
   /// occurrences of its did with a placeholder.
-  fn from(document: IotaDocument) -> Self {
+  fn from(document: DemiaDocument) -> Self {
     let id: DemiaDID = document.id().clone();
-    let IotaDocument { document, metadata } = document;
+    let DemiaDocument { document, metadata } = document;
 
     // Replace self-referential identifiers with a placeholder, but not others.
     let replace_id_with_placeholder = |did: CoreDID| -> CoreDID {
@@ -221,14 +221,14 @@ mod tests {
   use crate::state_metadata::PLACEHOLDER_DID;
   use crate::test_utils::generate_method;
   use crate::DemiaDID;
-  use crate::IotaDocument;
+  use crate::DemiaDocument;
   use crate::StateMetadataDocument;
   use crate::StateMetadataEncoding;
   use crate::StateMetadataVersion;
   use identity_document::service::Service;
 
   struct TestSetup {
-    document: IotaDocument,
+    document: DemiaDocument,
     did_self: DemiaDID,
     did_foreign: DemiaDID,
   }
@@ -239,7 +239,7 @@ mod tests {
     let did_foreign =
       DemiaDID::parse("did:demia:0x71b709dff439f1ac9dd2b9c2e28db0807156b378e13bfa3605ce665aa0d0fdca").unwrap();
 
-    let mut document: IotaDocument = IotaDocument::new_with_id(did_self.clone());
+    let mut document: DemiaDocument = DemiaDocument::new_with_id(did_self.clone());
     document
       .insert_method(generate_method(&did_self, "did-self"), MethodScope::VerificationMethod)
       .unwrap();
@@ -351,8 +351,8 @@ mod tests {
       <CoreDID as AsRef<CoreDID>>::as_ref(PLACEHOLDER_DID.as_ref())
     );
 
-    let iota_document = state_metadata_doc.into_demia_document(&did_self).unwrap();
-    assert_eq!(iota_document, document);
+    let demia_document = state_metadata_doc.into_demia_document(&did_self).unwrap();
+    assert_eq!(demia_document, document);
   }
 
   #[test]

@@ -362,14 +362,14 @@ mod demia_handler {
 
   use super::Resolver;
   use identity_demia_core::DemiaDID;
-  use identity_demia_core::IotaDocument;
+  use identity_demia_core::DemiaDocument;
   use identity_demia_core::IotaIdentityClientExt;
   use identity_document::document::CoreDocument;
   use std::collections::HashMap;
   use std::sync::Arc;
   impl<DOC> Resolver<DOC>
   where
-    DOC: From<IotaDocument> + AsRef<CoreDocument> + 'static,
+    DOC: From<DemiaDocument> + AsRef<CoreDocument> + 'static,
   {
     /// Convenience method for attaching a new handler responsible for resolving IOTA DIDs.
     ///
