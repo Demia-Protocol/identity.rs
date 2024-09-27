@@ -74,7 +74,7 @@ pub mod prelude {
   //! Prelude of commonly used types
 
   pub use identity_demia_core::DemiaDID;
-  pub use identity_demia_core::IotaDocument;
+  pub use identity_demia_core::DemiaDocument;
 
   #[cfg(feature = "iota-client")]
   #[cfg_attr(docsrs, doc(cfg(feature = "iota-client")))]

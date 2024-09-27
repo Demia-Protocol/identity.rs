@@ -17,8 +17,8 @@ use crate::block::output::RentStructure;
 use crate::block::output::UnlockCondition;
 use crate::block::protocol::ProtocolParameters;
 use crate::DemiaDID;
+use crate::DemiaDocument;
 use crate::Error;
-use crate::IotaDocument;
 use crate::NetworkName;
 use crate::Result;
 
@@ -57,7 +57,7 @@ pub trait IotaIdentityClientExt: IotaIdentityClient {
   async fn new_did_output(
     &self,
     address: Address,
-    document: IotaDocument,
+    document: DemiaDocument,
     rent_structure: Option<RentStructure>,
   ) -> Result<AliasOutput> {
     let rent_structure: RentStructure = if let Some(rent) = rent_structure {
@@ -90,7 +90,7 @@ pub trait IotaIdentityClientExt: IotaIdentityClient {
   /// # Errors
   ///
   /// Returns `Err` when failing to resolve the DID contained in `document`.
-  async fn update_did_output(&self, document: IotaDocument) -> Result<AliasOutput> {
+  async fn update_did_output(&self, document: DemiaDocument) -> Result<AliasOutput> {
     let id: AliasId = AliasId::from(document.id());
     let (_, alias_output) = self.get_alias_output(id).await?;
 
@@ -132,19 +132,19 @@ pub trait IotaIdentityClientExt: IotaIdentityClient {
     alias_output_builder.finish().map_err(Error::AliasOutputBuildError)
   }
 
-  /// Resolve a [`IotaDocument`]. Returns an empty, deactivated document if the state metadata
+  /// Resolve a [`DemiaDocument`]. Returns an empty, deactivated document if the state metadata
   /// of the Alias Output is empty.
   ///
   /// # Errors
   ///
   /// - [`NetworkMismatch`](Error::NetworkMismatch) if the network of the DID and client differ.
   /// - [`NotFound`](iota_sdk::client::Error::NoOutput) if the associated Alias Output was not found.
-  async fn resolve_did(&self, did: &DemiaDID) -> Result<IotaDocument> {
+  async fn resolve_did(&self, did: &DemiaDID) -> Result<DemiaDocument> {
     validate_network(self, did).await?;
 
     let id: AliasId = AliasId::from(did);
     let (_, alias_output) = self.get_alias_output(id).await?;
-    IotaDocument::unpack_from_output(did, &alias_output, true)
+    DemiaDocument::unpack_from_output(did, &alias_output, true)
   }
 
   /// Fetches the [`AliasOutput`] associated with the given DID.

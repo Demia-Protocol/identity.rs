@@ -21,8 +21,8 @@ use crate::block::Block;
 use crate::client::identity_client::validate_network;
 use crate::error::Result;
 use crate::DemiaDID;
+use crate::DemiaDocument;
 use crate::Error;
-use crate::IotaDocument;
 use crate::IotaIdentityClient;
 use crate::IotaIdentityClientExt;
 use crate::NetworkName;
@@ -45,7 +45,7 @@ pub trait IotaClientExt: IotaIdentityClient {
     secret_manager: &SecretManager,
     alias_output: AliasOutput,
     ountry_code: &CountryCode,
-  ) -> Result<IotaDocument>;
+  ) -> Result<DemiaDocument>;
 
   /// Destroy the Alias Output containing the given `did`, sending its tokens to a new Basic Output
   /// unlockable by `address`.
@@ -68,13 +68,13 @@ impl IotaClientExt for Client {
     secret_manager: &SecretManager,
     alias_output: AliasOutput,
     country_code: &CountryCode,
-  ) -> Result<IotaDocument> {
+  ) -> Result<DemiaDocument> {
     let block: Block = publish_output(self, secret_manager, alias_output)
       .await
       .map_err(|err| Error::DIDUpdateError("publish_did_output: publish failed", Some(Box::new(err))))?;
     let network: NetworkName = self.network_name().await?;
 
-    IotaDocument::unpack_from_block(country_code, &network, &block)?
+    DemiaDocument::unpack_from_block(country_code, &network, &block)?
       .into_iter()
       .next()
       .ok_or(Error::DIDUpdateError(
