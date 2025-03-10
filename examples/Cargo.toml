@@ -12,7 +12,7 @@ identity_eddsa_verifier = { path = "../identity_eddsa_verifier", default-feature
 identity_iota = { path = "../identity_iota", default-features = false, features = ["iota-client", "client", "memstore", "domain-linkage", "revocation-bitmap", "status-list-2021", "jpt-bbs-plus"] }
 identity_stronghold = { path = "../identity_stronghold", default-features = false, features = ["bbs-plus"] }
 
-iota-sdk = { git = "https://github.com/demia-protocol/demia-sdk", branch = "develop", default-features = false, features = ["tls", "client", "stronghold"] }
+iota-sdk = { git = "https://github.com/demia-protocol/node-network-sdk", branch = "develop-demia", default-features = false, features = ["tls", "client", "stronghold"] }
 json-proof-token.workspace = true
 primitive-types = "0.12.1"
 rand = "0.8.5"
