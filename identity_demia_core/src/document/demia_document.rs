@@ -287,7 +287,7 @@ impl DemiaDocument {
   /// Returns the first [`Service`] with an `id` property matching the provided `query`, if present.
   // NOTE: This method demonstrates unexpected behaviour in the edge cases where the document contains
   // services whose ids are of the form <did different from this document's>#<fragment>.
-  pub fn resolve_service<'query, 'me, Q>(&'me self, query: Q) -> Option<&Service>
+  pub fn resolve_service<'query, 'me, Q>(&'me self, query: Q) -> Option<&'me Service>
   where
     Q: Into<DIDUrlQuery<'query>>,
   {
@@ -298,7 +298,7 @@ impl DemiaDocument {
   /// provided `query` and the verification relationship specified by `scope` if present.
   // NOTE: This method demonstrates unexpected behaviour in the edge cases where the document contains methods
   // whose ids are of the form <did different from this document's>#<fragment>.
-  pub fn resolve_method<'query, 'me, Q>(&'me self, query: Q, scope: Option<MethodScope>) -> Option<&VerificationMethod>
+  pub fn resolve_method<'query, 'me, Q>(&'me self, query: Q, scope: Option<MethodScope>) -> Option<&'me VerificationMethod>
   where
     Q: Into<DIDUrlQuery<'query>>,
   {
