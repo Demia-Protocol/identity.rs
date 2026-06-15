@@ -81,7 +81,10 @@ impl DemiaDID {
   /// # use isocountry::CountryCode;
   /// #
   /// let did = DemiaDID::new(&[1;32], &CountryCode::USA, &NetworkName::try_from("dmia").unwrap());
-  /// assert_eq!(did.as_str(), "did:demia:0x0101010101010101010101010101010101010101010101010101010101010101");
+  /// assert_eq!(
+  ///   did.as_str(),
+  ///   "did:demia:usa:dmia:0x0101010101010101010101010101010101010101010101010101010101010101"
+  /// );
   pub fn new(bytes: &[u8; 32], country_code: &CountryCode, network_name: &NetworkName) -> Self {
     let tag = prefix_hex::encode(bytes);
     let did: String = format!(
@@ -119,7 +122,10 @@ impl DemiaDID {
   /// # use isocountry::CountryCode;
   /// #
   /// let placeholder = DemiaDID::placeholder(&CountryCode::USA, &NetworkName::try_from("dmia").unwrap());
-  /// assert_eq!(placeholder.as_str(), "did:demia:0x0000000000000000000000000000000000000000000000000000000000000000");
+  /// assert_eq!(
+  ///   placeholder.as_str(),
+  ///   "did:demia:usa:dmia:0x0000000000000000000000000000000000000000000000000000000000000000"
+  /// );
   /// assert!(placeholder.is_placeholder());
   pub fn placeholder(country_code: &CountryCode, network_name: &NetworkName) -> Self {
     Self::new(&[0; 32], country_code, network_name)
@@ -158,7 +164,7 @@ impl DemiaDID {
   pub fn try_from_core(did: CoreDID) -> Result<Self> {
     Self::check_validity(&did)?;
 
-    Ok(Self(Self::normalize(did)))
+    Ok(Self(did))
   }
 
   // ===========================================================================
@@ -252,26 +258,6 @@ impl DemiaDID {
   fn check_network<D: DID>(did: &D) -> Result<()> {
     let (_, network_name, _) = Self::denormalized_components(did.method_id());
     NetworkName::validate_network_name(network_name).map_err(|_| DIDError::Other("invalid network name"))
-  }
-
-  /// Normalizes the DID `method_id` by removing the default network segment if present.
-  ///
-  /// E.g.
-  /// - `"did:iota:main:123" -> "did:iota:123"` is normalized
-  /// - `"did:iota:dev:123" -> "did:iota:dev:123"` is unchanged
-  // TODO: Remove the lint once this bug in clippy has been fixed. Without to_owned a mutable reference will be aliased.
-  #[allow(clippy::unnecessary_to_owned)]
-  fn normalize(mut did: CoreDID) -> CoreDID {
-    let method_id = did.method_id();
-    let (_, network, tag) = Self::denormalized_components(method_id);
-    if tag.len() == method_id.len() || network != Self::DEFAULT_NETWORK {
-      did
-    } else {
-      did
-        .set_method_id(tag.to_owned())
-        .expect("normalizing a valid CoreDID should be Ok");
-      did
-    }
   }
 
   /// foo:bar -> (foo, DemiaDID::DEFAULT_NETWORK, bar)
@@ -582,13 +568,17 @@ mod tests {
 
   #[test]
   fn placeholder_produces_a_did_with_expected_string_representation() {
+    let default_country = CountryCode::for_alpha3_caseless(DemiaDID::DEFAULT_COUNTRY).unwrap();
+    let default_network = NetworkName::try_from(DemiaDID::DEFAULT_NETWORK).unwrap();
     assert_eq!(
-      DemiaDID::placeholder(
-        &CountryCode::for_alpha3_caseless(DemiaDID::DEFAULT_COUNTRY).unwrap(),
-        &NetworkName::try_from(DemiaDID::DEFAULT_NETWORK).unwrap()
+      DemiaDID::placeholder(&default_country, &default_network).as_str(),
+      format!(
+        "did:{}:{}:{}:{}",
+        DemiaDID::METHOD,
+        DemiaDID::DEFAULT_COUNTRY,
+        DemiaDID::DEFAULT_NETWORK,
+        DemiaDID::PLACEHOLDER_TAG
       )
-      .as_str(),
-      format!("did:{}:{}", DemiaDID::METHOD, DemiaDID::PLACEHOLDER_TAG)
     );
 
     for name in VALID_NETWORK_NAMES
@@ -611,7 +601,7 @@ mod tests {
   }
 
   #[test]
-  fn normalization_in_constructors() {
+  fn explicit_scope_is_preserved_by_constructors() {
     let did_with_default_network_string: String = format!(
       "did:{}:{}:{}:{}",
       DemiaDID::METHOD,
@@ -619,13 +609,21 @@ mod tests {
       DemiaDID::DEFAULT_NETWORK,
       VALID_ALIAS_ID_STR
     );
-    let expected_normalization_string_representation: String =
-      format!("did:{}:{}", DemiaDID::METHOD, VALID_ALIAS_ID_STR);
 
     assert_eq!(
-      DemiaDID::parse(did_with_default_network_string).unwrap().as_str(),
-      expected_normalization_string_representation
+      DemiaDID::parse(&did_with_default_network_string).unwrap().as_str(),
+      did_with_default_network_string
     );
+  }
+
+  #[test]
+  fn legacy_did_keeps_its_short_representation() {
+    let legacy_did = format!("did:{}:{}", DemiaDID::METHOD, VALID_ALIAS_ID_STR);
+    let did = DemiaDID::parse(&legacy_did).unwrap();
+
+    assert_eq!(did.as_str(), legacy_did);
+    assert_eq!(did.country_str(), DemiaDID::DEFAULT_COUNTRY);
+    assert_eq!(did.network_str(), DemiaDID::DEFAULT_NETWORK);
   }
 
   #[test]

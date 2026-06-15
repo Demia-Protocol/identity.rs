@@ -33,17 +33,46 @@ pub struct StateMetadataDocument {
   pub(crate) document: CoreDocument,
   #[serde(rename = "meta")]
   pub(crate) metadata: DemiaDocumentMetadata,
+  #[serde(default, skip_serializing_if = "Option::is_none", rename = "country")]
+  pub(crate) country: Option<String>,
+  #[serde(default, skip_serializing_if = "Option::is_none", rename = "network")]
+  pub(crate) network: Option<String>,
 }
 
 impl StateMetadataDocument {
-  /// Transforms the document into a [`DemiaDocument`] by replacing all placeholders with `original_did`.
+  /// Transforms the document into a [`DemiaDocument`] by restoring its scoped DID in all placeholders.
   pub fn into_demia_document(self, original_did: &DemiaDID) -> Result<DemiaDocument> {
-    let Self { document, metadata } = self;
+    let Self {
+      document,
+      metadata,
+      country,
+      network,
+    } = self;
+
+    let document_did = match (country.as_deref(), network.as_deref()) {
+      (Some(country), Some(network)) => {
+        if country != original_did.country_str() {
+          return Err(Error::InvalidStateMetadata("country does not match the requested DID"));
+        }
+        if network != original_did.network_str() {
+          return Err(Error::InvalidStateMetadata("network does not match the requested DID"));
+        }
+
+        DemiaDID::parse(format!(
+          "did:{}:{country}:{network}:{}",
+          DemiaDID::METHOD,
+          original_did.tag()
+        ))
+        .map_err(|_| Error::InvalidStateMetadata("invalid country or network in state metadata"))?
+      }
+      (None, None) => original_did.clone(),
+      _ => return Err(Error::InvalidStateMetadata("country and network must both be present")),
+    };
     // Transform identifiers: Replace placeholder identifiers, and ensure that `id` and `controller` adhere to the
     // specification.
     let replace_placeholder_with_method_check = |did: CoreDID| -> Result<CoreDID> {
       if did == PLACEHOLDER_DID.as_ref() {
-        Ok(CoreDID::from(original_did.clone()))
+        Ok(CoreDID::from(document_did.clone()))
       } else {
         // TODO: Consider introducing better error variant
         DemiaDID::check_validity(&did).map_err(Error::DIDSyntaxError)?;
@@ -54,7 +83,7 @@ impl StateMetadataDocument {
     // Methods and services are not required to be IOTA UTXO DIDs, but we still want to replace placeholders
     let replace_placeholder = |did: CoreDID| -> Result<CoreDID> {
       if did == PLACEHOLDER_DID.as_ref() {
-        Ok(CoreDID::from(original_did.clone()))
+        Ok(CoreDID::from(document_did.clone()))
       } else {
         Ok(did)
       }
@@ -188,6 +217,8 @@ impl From<DemiaDocument> for StateMetadataDocument {
   /// occurrences of its did with a placeholder.
   fn from(document: DemiaDocument) -> Self {
     let id: DemiaDID = document.id().clone();
+    let country = Some(id.country_str().to_owned());
+    let network = Some(id.network_str().to_owned());
     let DemiaDocument { document, metadata } = document;
 
     // Replace self-referential identifiers with a placeholder, but not others.
@@ -204,6 +235,8 @@ impl From<DemiaDocument> for StateMetadataDocument {
     StateMetadataDocument {
       document: document.map_unchecked(id_update, controller_update, methods_update, service_update),
       metadata,
+      country,
+      network,
     }
   }
 }
@@ -235,9 +268,9 @@ mod tests {
 
   fn test_document() -> TestSetup {
     let did_self =
-      DemiaDID::parse("did:demia:0x8036235b6b5939435a45d68bcea7890eef399209a669c8c263fac7f5089b2ec6").unwrap();
+      DemiaDID::parse("did:demia:usa:dmia:0x8036235b6b5939435a45d68bcea7890eef399209a669c8c263fac7f5089b2ec6").unwrap();
     let did_foreign =
-      DemiaDID::parse("did:demia:0x71b709dff439f1ac9dd2b9c2e28db0807156b378e13bfa3605ce665aa0d0fdca").unwrap();
+      DemiaDID::parse("did:demia:usa:dmia:0x71b709dff439f1ac9dd2b9c2e28db0807156b378e13bfa3605ce665aa0d0fdca").unwrap();
 
     let mut document: DemiaDocument = DemiaDocument::new_with_id(did_self.clone());
     document
@@ -299,6 +332,8 @@ mod tests {
     } = test_document();
 
     let state_metadata_doc: StateMetadataDocument = StateMetadataDocument::from(document.clone());
+    assert_eq!(state_metadata_doc.country.as_deref(), Some(did_self.country_str()));
+    assert_eq!(state_metadata_doc.network.as_deref(), Some(did_self.network_str()));
 
     assert_eq!(
       state_metadata_doc
@@ -356,6 +391,42 @@ mod tests {
   }
 
   #[test]
+  fn scope_must_match_the_requested_did() {
+    let TestSetup { document, did_self, .. } = test_document();
+    let state_metadata_doc = StateMetadataDocument::from(document);
+
+    let wrong_country =
+      DemiaDID::parse(format!("did:demia:can:{}:{}", did_self.network_str(), did_self.tag())).unwrap();
+    assert!(state_metadata_doc.clone().into_demia_document(&wrong_country).is_err());
+
+    let wrong_network =
+      DemiaDID::parse(format!("did:demia:{}:test:{}", did_self.country_str(), did_self.tag())).unwrap();
+    assert!(state_metadata_doc.into_demia_document(&wrong_network).is_err());
+  }
+
+  #[test]
+  fn legacy_metadata_without_scope_remains_resolvable() {
+    let TestSetup { document, did_self, .. } = test_document();
+    let mut state_metadata_doc = StateMetadataDocument::from(document);
+    state_metadata_doc.country = None;
+    state_metadata_doc.network = None;
+    let legacy_did = DemiaDID::parse(format!("did:demia:{}", did_self.tag())).unwrap();
+
+    let document = state_metadata_doc.into_demia_document(&legacy_did).unwrap();
+    assert_eq!(document.id(), &legacy_did);
+  }
+
+  #[test]
+  fn scoped_metadata_restores_the_explicit_did() {
+    let TestSetup { document, did_self, .. } = test_document();
+    let state_metadata_doc = StateMetadataDocument::from(document);
+    let legacy_did = DemiaDID::parse(format!("did:demia:{}", did_self.tag())).unwrap();
+
+    let document = state_metadata_doc.into_demia_document(&legacy_did).unwrap();
+    assert_eq!(document.id(), &did_self);
+  }
+
+  #[test]
   fn test_packing_roundtrip() {
     let TestSetup { document, .. } = test_document();
 
@@ -370,6 +441,8 @@ mod tests {
       state_metadata_doc.metadata.deactivated,
       unpacked_doc.metadata.deactivated
     );
+    assert_eq!(state_metadata_doc.country, unpacked_doc.country);
+    assert_eq!(state_metadata_doc.network, unpacked_doc.network);
 
     assert_eq!(state_metadata_doc.document.id(), unpacked_doc.document.id());
     assert_eq!(
@@ -414,8 +487,11 @@ mod tests {
     state_metadata_doc.metadata.governor_address = None;
     state_metadata_doc.metadata.state_controller_address = None;
     let expected_payload: String = format!(
-      "{{\"doc\":{},\"meta\":{}}}",
-      state_metadata_doc.document, state_metadata_doc.metadata
+      "{{\"doc\":{},\"meta\":{},\"country\":\"{}\",\"network\":\"{}\"}}",
+      state_metadata_doc.document,
+      state_metadata_doc.metadata,
+      state_metadata_doc.country.as_deref().unwrap(),
+      state_metadata_doc.network.as_deref().unwrap()
     );
 
     // DID marker.

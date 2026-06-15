@@ -743,8 +743,10 @@ mod tests {
     assert_eq!(document.metadata.deactivated, Some(true));
 
     // Ensure no other fields are injected.
+    let resolved_controller_did =
+      "did:demia:usa:dmia:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     let json: String = format!(
-      r#"{{"doc":{{"id":"{did}","controller":"{controller_did}"}},"meta":{{"deactivated":true,"governorAddress":"demia1pz424242424242424242424242424242424242424242424242425ryaqzy","stateControllerAddress":"demia1pz424242424242424242424242424242424242424242424242425ryaqzy"}}}}"#
+      r#"{{"doc":{{"id":"{did}","controller":"{resolved_controller_did}"}},"meta":{{"deactivated":true,"governorAddress":"dmia1pz424242424242424242424242424242424242424242424242425uk7x2y","stateControllerAddress":"dmia1pz424242424242424242424242424242424242424242424242425uk7x2y"}}}}"#
     );
     assert_eq!(document.to_json().unwrap(), json);
 
