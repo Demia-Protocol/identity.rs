@@ -51,11 +51,17 @@ impl StateMetadataDocument {
 
     let document_did = match (country.as_deref(), network.as_deref()) {
       (Some(country), Some(network)) => {
-        if country != original_did.country_str() {
-          return Err(Error::InvalidStateMetadata("country does not match the requested DID"));
-        }
-        if network != original_did.network_str() {
-          return Err(Error::InvalidStateMetadata("network does not match the requested DID"));
+        // A scoped requester must match the on-chain scope exactly. An unscoped (legacy short) DID
+        // makes no scope assertion, so it adopts whatever scope the alias currently carries — this
+        // lets a legacy short DID keep resolving after the identity is promoted to ANY country, not
+        // just the network default.
+        if original_did.has_explicit_scope() {
+          if country != original_did.country_str() {
+            return Err(Error::InvalidStateMetadata("country does not match the requested DID"));
+          }
+          if network != original_did.network_str() {
+            return Err(Error::InvalidStateMetadata("network does not match the requested DID"));
+          }
         }
 
         DemiaDID::parse(format!(
@@ -217,8 +223,14 @@ impl From<DemiaDocument> for StateMetadataDocument {
   /// occurrences of its did with a placeholder.
   fn from(document: DemiaDocument) -> Self {
     let id: DemiaDID = document.id().clone();
-    let country = Some(id.country_str().to_owned());
-    let network = Some(id.network_str().to_owned());
+    // Only persist scope when the DID carries it explicitly. A legacy short DID reports *defaulted*
+    // country/network via its accessors; writing those into the state metadata would silently
+    // promote the document to the long form on the next resolution. Leave legacy docs unscoped.
+    let (country, network) = if id.has_explicit_scope() {
+      (Some(id.country_str().to_owned()), Some(id.network_str().to_owned()))
+    } else {
+      (None, None)
+    };
     let DemiaDocument { document, metadata } = document;
 
     // Replace self-referential identifiers with a placeholder, but not others.
@@ -405,6 +417,22 @@ mod tests {
   }
 
   #[test]
+  fn legacy_did_adopts_non_default_promoted_scope() {
+    // The alias has been promoted to a non-default country. A legacy short DID (no scope assertion)
+    // must still resolve, adopting the promoted scope rather than being rejected for a country
+    // mismatch against the default. A *scoped* mismatch is still rejected (see above).
+    let TestSetup { document, did_self, .. } = test_document();
+    let mut state_metadata_doc = StateMetadataDocument::from(document);
+    state_metadata_doc.country = Some("can".to_string());
+
+    let legacy_did = DemiaDID::parse(format!("did:demia:{}", did_self.tag())).unwrap();
+    let resolved = state_metadata_doc.into_demia_document(&legacy_did).unwrap();
+    assert!(resolved.id().has_explicit_scope());
+    assert_eq!(resolved.id().country_str(), "can");
+    assert_eq!(resolved.id().tag(), did_self.tag());
+  }
+
+  #[test]
   fn legacy_metadata_without_scope_remains_resolvable() {
     let TestSetup { document, did_self, .. } = test_document();
     let mut state_metadata_doc = StateMetadataDocument::from(document);
@@ -424,6 +452,26 @@ mod tests {
 
     let document = state_metadata_doc.into_demia_document(&legacy_did).unwrap();
     assert_eq!(document.id(), &did_self);
+  }
+
+  #[test]
+  fn legacy_source_document_stays_unscoped() {
+    // A document whose DID is the legacy short form must NOT gain country/network scope when
+    // converted to state metadata, otherwise an ordinary update would silently promote it to the
+    // long form on the next resolution.
+    let legacy_did =
+      DemiaDID::parse("did:demia:0x8036235b6b5939435a45d68bcea7890eef399209a669c8c263fac7f5089b2ec6").unwrap();
+    assert!(!legacy_did.has_explicit_scope());
+
+    let document = DemiaDocument::new_with_id(legacy_did.clone());
+    let state_metadata_doc = StateMetadataDocument::from(document);
+    assert_eq!(state_metadata_doc.country, None);
+    assert_eq!(state_metadata_doc.network, None);
+
+    // Round-tripping keeps the short form (no promotion).
+    let restored = state_metadata_doc.into_demia_document(&legacy_did).unwrap();
+    assert_eq!(restored.id(), &legacy_did);
+    assert!(!restored.id().has_explicit_scope());
   }
 
   #[test]

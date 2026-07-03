@@ -204,6 +204,12 @@ pub(super) async fn validate_network<T>(client: &T, did: &DemiaDID) -> Result<()
 where
   T: IotaIdentityClient + ?Sized,
 {
+  // Legacy (unscoped) DIDs carry no explicit network segment; `network_str()` returns a default
+  // that says nothing about the network the alias actually lives on. Enforcing it here would reject
+  // legacy DIDs on any network whose HRP differs from the default. Resolve them by tag instead.
+  if !did.has_explicit_scope() {
+    return Ok(());
+  }
   let network_hrp: String = client
     .get_protocol_parameters()
     .await
