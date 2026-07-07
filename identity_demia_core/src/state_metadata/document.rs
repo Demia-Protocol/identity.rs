@@ -52,9 +52,7 @@ impl StateMetadataDocument {
     let document_did = match (country.as_deref(), network.as_deref()) {
       (Some(country), Some(network)) => {
         // A scoped requester must match the on-chain scope exactly. An unscoped (legacy short) DID
-        // makes no scope assertion, so it adopts whatever scope the alias currently carries — this
-        // lets a legacy short DID keep resolving after the identity is promoted to ANY country, not
-        // just the network default.
+        // makes no scope assertion, so it adopts whatever scope the alias currently carries
         if original_did.has_explicit_scope() {
           if country != original_did.country_str() {
             return Err(Error::InvalidStateMetadata("country does not match the requested DID"));
@@ -223,9 +221,7 @@ impl From<DemiaDocument> for StateMetadataDocument {
   /// occurrences of its did with a placeholder.
   fn from(document: DemiaDocument) -> Self {
     let id: DemiaDID = document.id().clone();
-    // Only persist scope when the DID carries it explicitly. A legacy short DID reports *defaulted*
-    // country/network via its accessors; writing those into the state metadata would silently
-    // promote the document to the long form on the next resolution. Leave legacy docs unscoped.
+    // Only persist scope when the DID carries it explicitly. Leave legacy docs unscoped.
     let (country, network) = if id.has_explicit_scope() {
       (Some(id.country_str().to_owned()), Some(id.network_str().to_owned()))
     } else {

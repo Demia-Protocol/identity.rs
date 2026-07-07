@@ -189,9 +189,7 @@ impl DemiaDID {
   /// Returns `true` if the `DID` carries explicit `country:network` scope segments,
   /// i.e. it is in the long form `did:demia:<country>:<network>:<tag>`.
   ///
-  /// A legacy short DID (`did:demia:<tag>`) returns `false`; its [`country_str`](Self::country_str)
-  /// and [`network_str`](Self::network_str) are *defaulted*, not explicit. This distinction lets
-  /// callers avoid treating a defaulted scope as if it had been published on-chain.
+  /// A legacy short DID (`did:demia:<tag>`) returns `false`;
   pub fn has_explicit_scope(&self) -> bool {
     // `denormalized_components` only splits country/network out when the method id contains a ':'.
     self.method_id().contains(':')
