@@ -38,7 +38,8 @@ async fn main() -> anyhow::Result<()> {
   println!("  network_str():  {}   (defaulted = {})", did.network_str(), did.network_str() == DemiaDID::DEFAULT_NETWORK);
   println!("  tag():          {}", did.tag());
 
-  // The canonical string must be byte-identical to what you passed in (no silent rewrite to long form).
+  // DemiaDID::parse lowercases the input, so compare against the lowercased DID. Asserts that a
+  // short (country/network-less) DID must NOT be silently expanded into long form during parse.
   assert_eq!(did.as_str(), did_str.to_lowercase(), "DID string was rewritten during parse!");
   // Validity must pass even though country/network are absent.
   assert!(DemiaDID::is_valid(did.as_ref()), "DID failed validity check");
