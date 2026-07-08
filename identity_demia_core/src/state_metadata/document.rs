@@ -33,9 +33,9 @@ pub struct StateMetadataDocument {
   pub(crate) document: CoreDocument,
   #[serde(rename = "meta")]
   pub(crate) metadata: DemiaDocumentMetadata,
-  #[serde(default, skip_serializing_if = "Option::is_none", rename = "country")]
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub(crate) country: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none", rename = "network")]
+  #[serde(default, skip_serializing_if = "Option::is_none")]
   pub(crate) network: Option<String>,
 }
 
