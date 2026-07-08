@@ -204,6 +204,10 @@ pub(super) async fn validate_network<T>(client: &T, did: &DemiaDID) -> Result<()
 where
   T: IotaIdentityClient + ?Sized,
 {
+  // Legacy (unscoped) DIDs carry no explicit network segment; Resolve them by tag instead.
+  if !did.has_explicit_scope() {
+    return Ok(());
+  }
   let network_hrp: String = client
     .get_protocol_parameters()
     .await
